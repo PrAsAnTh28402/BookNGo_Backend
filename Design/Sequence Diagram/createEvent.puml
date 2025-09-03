@@ -1,0 +1,47 @@
+@startuml CreateEvents 
+actor Admin
+participant "Route: POST /api/events" as Route
+participant "AuthMiddleware" as Auth
+participant "EventController" as Controller
+participant "EventService" as Service
+participant "EventModel" as Model
+participant "PostgreSQL DB" as DB
+
+Admin -> Route: Sends POST /api/events with JSON body (event details + JWT)
+
+Route -> Auth: verifyToken(Authorization header)
+alt Token invalid
+    Auth -> Route: Return 401 { message: "Unauthorized" }
+else Token valid
+    Auth -> Auth: Decode JWT, extract user_id, role
+    Auth -> Route: checkAdminRole(role)
+    alt Role not admin
+        Auth -> Route: Return 403 { message: "Forbidden" }
+    else Role is admin
+        Route -> Controller: createEvent(req, res)
+        
+        Controller -> Controller: Extract variables from req.body
+        alt Missing required fields
+            Controller -> Admin: res.status(400).json({ message: "All fields are required" })
+        else All fields present
+            Controller -> Controller: Validate data formats (event_date, capacity, price)
+            Controller -> Service: createEventService(eventData)
+            
+            Service -> Service: Check if event with same title + date exists
+            Service -> DB: SELECT * FROM events WHERE title=$1 AND event_date=$2
+            DB --> Service: Return rows
+            alt Event already exists
+                Service -> Controller: Return 409 { message: "Event already exists" }
+            else Event does not exist
+                Service -> Model: createEvent(eventEntity)
+                Model -> DB: INSERT INTO events (...) VALUES (...)
+                DB --> Model: Returns newly created event record
+                Model --> Service: Returns EventEntity
+                Service -> Service: Map EventEntity → EventDTO
+                Service --> Controller: Return EventDTO
+                Controller -> Admin: res.status(201).json({ message: "Event created successfully", event: EventDTO })
+            end
+        end
+    end
+end
+@enduml

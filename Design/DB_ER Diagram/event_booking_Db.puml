@@ -1,0 +1,70 @@
+@startuml
+entity Users {
+  * user_id : INTEGER <<PK>>
+  --
+  name : VARCHAR(100) <<UNIQUE>>
+  email : VARCHAR(150) <<UNIQUE>>
+  password_hash : TEXT
+  role : VARCHAR(50) -- 'user' or 'admin'
+  is_active: BOOLEAN
+  created_at : TIMESTAMP
+  updated_at : TIMESTAMP
+  created_by: VARCHAR(50)
+  updated_by: VARCHAR(50)
+}
+
+entity Categories {
+  * category_id : INTEGER <<PK>>
+  --
+  name : VARCHAR(100) <<UNIQUE>>
+  description : TEXT
+  created_at : TIMESTAMP
+  updated_at : TIMESTAMP
+  is_active: BOOLEAN
+  created_by: VARCHAR(50)
+  updated_by: VARCHAR(50)
+}
+
+entity Events {
+  * event_id : INTEGER <<PK>>
+  --
+  title : VARCHAR(200)
+  location : VARCHAR(200)
+  event_date : DATE
+  time : VARCHAR(50)
+  description : TEXT
+  category_id : INTEGER <<FK>>
+  image_url : TEXT
+  capacity : INTEGER
+  available_seats : INTEGER
+  state_id: INTEGER
+  city_id:INTEGER
+  price : NUMERIC(10,2)
+  is_active : BOOLEAN
+  created_at : TIMESTAMP
+  updated_at : TIMESTAMP
+  created_by : INTEGER <<FK>> -- FK to Users(user_id)
+  updated_by : INTEGER <<FK>> -- FK to Users(user_id)
+}
+
+entity Bookings {
+  * booking_id : INTEGER <<PK>>
+  --
+  user_id : INTEGER <<FK>>
+  event_id : INTEGER <<FK>>
+  booking_date : TIMESTAMP
+  num_tickets : INTEGER
+  total_amount : NUMERIC(10,2)
+  status : VARCHAR(50) -- 'confirmed', 'cancelled'
+  created_at : TIMESTAMP
+  updated_at : TIMESTAMP
+  created_by : VARCHAR(50)
+  updated_by : VARCHAR(50)
+}
+
+' Relationships
+Users ||--o{ Events : "created_by / updated_by"
+Users ||--o{ Bookings : "makes"
+Categories ||--o{ Events : "categorizes"
+Events ||--o{ Bookings : "booked in"
+@enduml

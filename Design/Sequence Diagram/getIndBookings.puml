@@ -1,0 +1,36 @@
+@startuml GetIndividualBooking
+
+actor User
+participant "BookingController" as BC
+participant "verifyToken Middleware" as VT
+participant "BookingModel" as BM
+database "Database" as DB
+
+User -> BC : GET /api/bookings/:userId
+BC -> VT : verifyToken(req.headers.authorization)
+VT --> BC : valid token & user_id
+alt Invalid Token
+    VT --> User : 401 Unauthorized
+end
+
+BC -> BC : Check req.user.user_id === :userId
+alt User mismatch
+    BC --> User : 403 Forbidden
+end
+
+BC -> BM : fetchBookingsByUser(user_id)
+BM -> DB : SELECT booking_id, booking_date, num_tickets, total_amount, status, title, \n location, event_date FROM bookings JOIN events \nWHERE user_id=:userId ORDER BY booking_date DESC
+DB --> BM : list of bookings
+BM --> BC : return bookings list
+
+alt No bookings found
+    BC --> User : 404 No bookings found
+else Bookings found
+    BC --> BC : map to simplified JSON 
+    BC --> User : 200 OK + JSON
+end
+
+alt DB/server error
+    BC --> User : 500 Internal Server Error
+end
+@enduml

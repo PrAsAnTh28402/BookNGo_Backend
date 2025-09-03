@@ -1,0 +1,36 @@
+@startuml
+participant "User (Frontend)" as User
+participant "LoginController" as Controller
+participant "UserModel" as Model
+participant "Postgres DB" as DB
+participant "BcryptLibrary" as Bcrypt
+participant "JWTLibrary" as JWT
+
+User -> Controller: POST /api/login
+Controller -> Controller: Extract email and password from req.body
+Controller -> Controller: Validate email and password
+
+alt Missing email or password
+    Controller --> User: 400 Bad Request { "All fields are required" }
+end
+
+Controller -> Model: findUserByEmail(email)
+Model -> DB: SELECT * FROM users WHERE email=$1
+DB --> Model: Return user record or null
+Model --> Controller: existingUser
+
+alt User not found
+    Controller --> User: 404 Not Found { "User not found" }
+else User found
+    Controller -> Bcrypt: compare(password, existingUser.password_hash)
+    Bcrypt --> Controller: isMatch (true / false)
+
+    alt Password does not match
+        Controller --> User: 401 Unauthorized { "Invalid password" }
+    else Password matches
+        Controller -> JWT: sign({ user_id, role }, JWT_SECRET, { expiresIn: '1h' })
+        JWT --> Controller: token
+        Controller --> User: 200 OK
+end
+
+@enduml

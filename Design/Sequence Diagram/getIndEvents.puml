@@ -1,0 +1,111 @@
+@startuml Get Individual Event
+title Sequence Diagram – Get Event by ID (GET /api/events/:id)
+
+actor User
+participant Frontend
+participant "Express Controller\n(getEventById)" as Controller
+participant "EventService" as Service
+participant "EventRepository" as Repo
+database "PostgreSQL" as DB
+
+== Request Start ==
+
+User -> Frontend: Clicks on Event Card
+Frontend -> Controller: GET /api/events/:id
+
+note right of Controller
+Input Param:
+  req.params.id = "64fa8a9c58c"
+end note
+
+== Validation ==
+
+Controller -> Controller: Validate Event ID format
+alt Invalid ID Format
+  Controller -> Frontend: HTTP 400 Bad Request
+  note right
+    {
+      "error": "Invalid Event ID format"
+    }
+  end note
+  return
+end alt
+
+== Service & Repo Layer ==
+
+Controller -> Service: getEventById(id)
+Service -> Repo: findEventById(id)
+Repo -> DB: SELECT * FROM events WHERE id = $1
+DB --> Repo: Event Entity / null
+
+alt Event Found
+  Repo --> Service: EventEntity object
+  Service -> Service: Map Entity to EventDTO
+
+  note right
+  Entity Format:
+  {
+    "id": "64fa8a9c58c",
+    "name": "Music Night",
+    "location": "Chennai",
+    "date": "2025-09-15T18:00:00Z",
+    "organizer": "ABC Org",
+    "created_at": "...",
+    "updated_at": "..."
+  }
+
+  Mapped DTO:
+  {
+    "id": "64fa8a9c58c",
+    "name": "Music Night",
+    "location": "Chennai",
+    "date": "2025-09-15T18:00:00Z",
+    "organizer": "ABC Org"
+  }
+  end note
+
+  Service --> Controller: EventDTO
+  Controller --> Frontend: HTTP 200 OK
+
+  note right
+    {
+      "event": {
+        "id": "64fa8a9c58c",
+        "name": "Music Night",
+        "location": "Chennai",
+        "date": "2025-09-15T18:00:00Z",
+        "organizer": "ABC Org"
+      }
+    }
+  end note
+
+else Event Not Found
+  Repo --> Service: null
+  Service --> Controller: null
+  Controller --> Frontend: HTTP 404 Not Found
+
+  note right
+    {
+      "error": "Event not found"
+    }
+  end note
+end alt
+
+== Server/DB Error ==
+
+group Failure Case
+  alt DB failure or exception
+    DB -> Repo: throws Error
+    Repo --> Service: throws Error
+    Service --> Controller: throws Error
+    Controller --> Frontend: HTTP 500 Internal Server Error
+
+    note right
+      {
+        "error": "Something went wrong"
+      }
+    end note
+  end alt
+end group
+
+@enduml

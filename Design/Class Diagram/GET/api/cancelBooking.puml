@@ -1,0 +1,25 @@
+@startuml cancelBooking
+class User {
+    +user_id: INTEGER
+    +username: VARCHAR
+    +role: VARCHAR   -- 'user' or 'admin'
+}
+
+class Booking {
+    +booking_id: INTEGER
+    +user_id: INTEGER
+    +status: VARCHAR   -- 'confirmed' or 'cancelled'
+}
+
+class BookingController {
+    +cancelBooking(req, res)
+}
+
+class BookingModel {
+    +fetchBookingById(booking_id)
+    +deleteBookingById(booking_id)
+}
+
+BookingController --> BookingModel : calls
+Booking --> User : belongs to
+@enduml

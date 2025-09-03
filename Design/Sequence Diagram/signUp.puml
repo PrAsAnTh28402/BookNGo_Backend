@@ -1,0 +1,65 @@
+@startuml
+participant "User (Frontend)" as User
+participant "SignupController" as Controller
+participant "UserModel" as Model
+participant "Postgres DB" as DB
+participant "JWT Library" as JWT
+
+User -> Controller: POST /api/signup
+note right of User
+  req.body = { username, email, password }
+end note
+
+Controller -> Controller: 
+note right
+  username = req.body.username
+  email = req.body.email
+  password = req.body.password
+  role = 'user'  // default role, not from user
+end note
+
+alt Missing username, email, or password
+    Controller --> User: 400 Bad Request { message: "All fields are required" }
+    return
+end
+
+Controller -> Model: findUserByEmailOrUsername(email, username)
+note right of Model
+  SQL: SELECT * FROM users WHERE email=$1 OR username=$2
+end note
+
+Model -> DB: Execute SELECT query with params [email, username]
+DB --> Model: user record(s) / empty
+Model --> Controller: existingUser = user object / null
+
+alt User already exists
+    Controller --> User: 409 Conflict { message: "User already exists" }
+    return
+end
+
+Controller -> Controller: bcrypt.genSalt(10) -> salt
+Controller -> Controller: bcrypt.hash(password, salt) -> hashedPassword
+
+Controller -> Model: createUser({ username, email, password_hash: hashedPassword, role: 'user' })
+note right of Model
+  SQL: INSERT INTO users (username, email, password_hash, role) 
+       RETURNING user_id, username, email, role, created_at
+end note
+
+Model -> DB: Execute INSERT query with params
+DB --> Model: createdUser = { user_id, username, email, role: 'user', created_at }
+Model --> Controller: createdUser
+
+Controller -> JWT: sign({ user_id: createdUser.user_id, role: createdUser.role }, JWT_SECRET, { expiresIn: '1h' })
+JWT --> Controller: token
+
+Controller --> User: 201 Created
+note right of User
+  Response body = { 
+    user: createdUser, 
+    token: token, 
+    message: "Signup successful" 
+  }
+end note
+
+@enduml

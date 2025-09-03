@@ -1,0 +1,32 @@
+@startuml Delete Event Sequence Diagram
+title DELETE /api/events/:id – Soft Delete Sequence Diagram
+
+actor Client
+participant "Express Server" as Server
+participant "EventController" as Controller
+participant "EventService" as Service
+participant "EventModel (DB)" as DB
+
+Client -> Server : DELETE /api/events/:id
+Server -> Controller : deleteEventById(req, res)
+Controller -> Service : softDeleteEvent(id)
+Service -> DB : UPDATE events SET is_active = false WHERE id = :id AND is_active = true
+
+alt Event Found and Updated
+    DB --> Service : Success (rowCount = 1)
+    Service -> Controller : { success: true, message: "Event deleted" }
+    Controller -> Server : res.status(200).json(...)
+    Server -> Client : 200 OK + success message
+else Event Not Found or Already Inactive
+    DB --> Service : No rows updated (rowCount = 0)
+    Service -> Controller : { success: false, message: "Event not found" }
+    Controller -> Server : res.status(404).json(...)
+    Server -> Client : 404 Not Found
+end
+
+alt Error Occurred
+    Service -> Controller : throw error
+    Controller -> Server : res.status(500).json(...)
+    Server -> Client : 500 Internal Server Error
+end
+@enduml

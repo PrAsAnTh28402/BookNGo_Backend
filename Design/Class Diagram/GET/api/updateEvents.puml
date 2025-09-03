@@ -1,0 +1,42 @@
+@startuml Update Events 
+title PUT /bookngo/events/:id – Class Diagram
+
+class EventDTO {
+  - id: string
+  - title: string
+  - location: string
+  - event_date: string
+  - time: string
+  - description: string
+  - category: string
+  - image_url: string
+  - created_at: Date
+  - updated_at: Date
+}
+
+class Event {
+  - id: UUID
+  - title: string
+  - location: string
+  - event_date: Date
+  - time: string
+  - description: string
+  - category: string
+  - image_url: string
+  - created_at: Date
+  - updated_at: Date
+}
+
+class EventRepository {
+  + updateById(id: string, eventData: object): Event
+}
+
+class EventController {
+  + updateEvent(req, res): void
+}
+
+EventController --> EventRepository : uses
+EventRepository --> Event : updates
+Event --> EventDTO : maps to
+
+@enduml

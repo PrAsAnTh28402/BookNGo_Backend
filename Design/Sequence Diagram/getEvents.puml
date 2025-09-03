@@ -1,0 +1,61 @@
+@startuml GET_All_Events
+
+actor Dev as "User"
+
+participant "eventRoutes.js" as Route
+participant "eventController.js" as Controller
+participant "eventModel.js" as Model
+database "database" as DB
+
+== Step 1: API Request ==
+Dev -> Route : GET /api/events?page=1&limit=6&title=music&location=delhi
+
+note right of Route
+Receives the API call from frontend with
+optional filters and pagination parameters.
+end note
+
+Route -> Controller : getEvents(req, res)
+
+== Step 2: Controller Logic ==
+Controller -> Controller : Extract and validate query params (page, limit, title, location, event_date)
+
+alt Invalid pagination or filter
+    Controller --> Route : res.status(400).json({ error: "Invalid query parameters" })
+    Route --> Dev : HTTP 400 Bad Request
+else
+    Controller -> Controller : Calculate offset = (page - 1) * limit
+    Controller -> Model : getAllEvents({ title, location, event_date, offset, limit })
+
+    == Step 3: Model Logic ==
+    note right of Model
+    Dynamically build SQL query:
+    SELECT * FROM events WHERE true
+    Add filters: title, location, event_date
+    Add ORDER BY event_date ASC
+    Append LIMIT and OFFSET
+    end note
+
+    Model -> Model : Construct query string and values[]
+    Model -> DB : db.query(query, values)
+
+    alt DB error
+        DB --> Model : throw error
+        Model --> Controller : throw error
+        Controller --> Route : res.status(500).json({ error: "Internal Server Error" })
+        Route --> Dev : HTTP 500 Server Error
+    else
+        DB --> Model : rows[] (filtered event list)
+        Model --> Controller : return events[]
+
+        alt No events found
+            Controller --> Route : res.status(404).json({ message: "No events found" })
+            Route --> Dev : HTTP 404 Not Found
+        else
+            Controller --> Route : res.status(200).json({ data: events, page, limit })
+            Route --> Dev : HTTP 200 OK
+        end
+    end
+end
+
+@enduml

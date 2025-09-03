@@ -1,0 +1,35 @@
+@startuml GetAllEvents_ClassDiagram
+
+class Event {
+  +event_id : int
+  +title : string
+  +description : string
+  +location : string
+  +event_date : datetime
+  +available_seats : int
+  +price : float
+  +image_path : string
+  +created_at : datetime
+  +updated_at : datetime
+  +created_by : int
+  +updated_by : int
+}
+
+
+class EventModel {
+  +getAllEvents(): List<Event>
+}
+
+class EventController {
+  +getEvents(req: Request, res: Response): void
+}
+
+class EventRoutes {
+  +GET /api/events
+}
+
+EventModel --> Event : uses
+EventController --> EventModel : calls
+EventRoutes --> EventController : routes
+
+@enduml

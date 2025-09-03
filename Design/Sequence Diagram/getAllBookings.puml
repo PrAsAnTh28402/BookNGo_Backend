@@ -1,0 +1,46 @@
+@startuml
+actor Admin
+participant "bookingController" as BC
+participant "verifyToken Middleware" as VT
+participant "BookingModel" as BM
+database "Database" as DB
+
+== Admin requests all bookings ==
+Admin -> BC : GET /api/bookings
+BC -> VT : verifyToken(req.headers.authorization)
+VT --> BC : valid token & role=admin
+alt Invalid Token or Not Admin
+    VT --> Admin : 401 Unauthorized
+end
+
+== Fetch bookings from DB ==
+BC -> BM : fetchAllBookings(limit=10)
+BM -> DB : SELECT booking_id, booking_date, num_tickets, status,\nusername, title, location, event_date\nFROM bookings b\nJOIN users u ON b.user_id = u.user_id\nJOIN events e ON b.event_id = e.event_id\nORDER BY booking_date DESC\nLIMIT 10
+DB --> BM : return list of bookings
+BM --> BC : raw bookings list
+
+== Controller formats JSON ==
+BC -> BC : map raw data to simplified JSON:
+note right
+{
+  "booking_id": ...,
+  "booking_date": ...,
+  "num_tickets": ...,
+  "status": ...,
+  "user": {"username": ...},
+  "event": {"title": ..., "location": ..., "event_date": ...}
+}
+end note
+
+alt No bookings found
+    BC --> Admin : 404 Not Found
+else Bookings found
+    BC --> Admin : 200 OK + JSON 
+end
+
+== Database or Server Error ==
+alt DB or Server fails
+    BC --> Admin : 500 Internal Server Error
+end
+
+@enduml

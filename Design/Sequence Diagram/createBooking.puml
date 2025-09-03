@@ -1,0 +1,57 @@
+@startuml CreateBooking
+actor User
+participant "Route: POST /api/bookings" as Route
+participant "AuthMiddleware" as Auth
+participant "BookingController" as Controller
+participant "BookingService" as Service
+participant "BookingModel" as Model
+participant "EventModel / DB" as EventDB
+participant "PostgreSQL DB" as DB
+
+User -> Route: Sends POST /api/bookings with JSON body (event_id, num_tickets + JWT)
+
+Route -> Auth: verifyToken(Authorization header)
+alt Token invalid
+    Auth -> Route: Return 401 { message: "Unauthorized" }
+else Token valid
+    Auth -> Auth: Decode JWT, extract user_id
+    Auth -> Route: checkUserRole(role)
+    alt Role not user
+        Auth -> Route: Return 403 { message: "Forbidden" }
+    else Role is user
+        Route -> Controller: createBooking(req, res)
+        
+        Controller -> Controller: Extract variables from req.body
+        alt Missing required fields
+            Controller -> User: res.status(400).json({ message: "All fields are required" })
+        else All fields present
+            Controller -> Service: createBookingService(bookingData)
+            
+            Service -> EventDB: findById(event_id)
+            EventDB -> DB: SELECT * FROM events WHERE event_id=$1
+            DB --> EventDB: return event
+            alt Event does not exist
+                Service -> Controller: Return 404 { message: "Event not found" }
+            else Event exists
+                Service -> EventDB: check available_seats >= num_tickets
+                alt Not enough seats
+                    Service -> Controller: Return 400 { message: "Not enough seats available" }
+                else Seats available
+                    Service -> EventDB: updateAvailableSeats(event_id, remainingSeats)
+                    EventDB -> DB: UPDATE events SET available_seats=...
+                    DB --> EventDB: success
+                    EventDB --> Service: seats updated
+
+                    Service -> Model: createBooking(BookingEntity)
+                    Model -> DB: INSERT INTO bookings (...)
+                    DB --> Model: return new booking record
+                    Model --> Service: return BookingEntity
+                    Service -> Service: Map BookingEntity → BookingDTO
+                    Service --> Controller: Return BookingDTO
+                    Controller -> User: res.status(201).json({ message: "Booking created successfully", booking: BookingDTO })
+                end
+            end
+        end
+    end
+end
+@enduml

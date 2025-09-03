@@ -1,0 +1,40 @@
+@startuml Get Individual Event
+title GET /api/events/:id – Class Diagram
+
+class EventDTO {
+  - id: string
+  - name: string
+  - date: string
+  - time: string
+  - location: string
+  - description: string
+  - category: string
+  - imageUrl: string
+  - createdAt: Date
+}
+
+class Event {
+  - _id: ObjectId
+  - name: string
+  - date: Date
+  - time: string
+  - location: string
+  - description: string
+  - category: string
+  - imageUrl: string
+  - createdAt: Date
+}
+
+class EventRepository {
+  + findById(id: string): Event
+}
+
+class EventController {
+  + getEventById(req, res): void
+}
+
+EventController --> EventRepository : uses
+EventRepository --> Event : loads
+Event --> EventDTO : maps to
+
+@enduml

@@ -1,0 +1,44 @@
+@startuml CreateBooking
+class BookingEntity {
+  + booking_id : INTEGER
+  + user_id : INTEGER
+  + event_id : INTEGER
+  + booking_date : TIMESTAMP
+  + num_tickets : INTEGER
+  + total_amount : NUMERIC
+  + status : VARCHAR
+  + created_at : TIMESTAMP
+  + updated_at : TIMESTAMP
+}
+
+class BookingDTO {
+  + user_id : INTEGER
+  + event_id : INTEGER
+  + num_tickets : INTEGER
+  + total_amount : NUMERIC
+  + status : VARCHAR
+  + booking_date : TIMESTAMP
+}
+
+class BookingModel {
+  + createBooking(data : BookingEntity): BookingEntity / error
+}
+
+class BookingService {
+  + createBookingService(bookingData : BookingEntity): BookingDTO / error
+}
+
+class BookingController {
+  + createBooking(req, res): Response
+}
+
+class AuthMiddleware {
+  + verifyToken(req, res, next): void
+  + checkUserRole(req, res, next): void
+}
+
+BookingController --> BookingService : calls createBookingService(bookingData)
+BookingService --> BookingModel : calls createBooking(BookingEntity)
+BookingService --> BookingDTO : maps BookingEntity to BookingDTO
+BookingController --> AuthMiddleware : uses verifyToken & checkUserRole before execution
+@enduml
